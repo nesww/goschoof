@@ -1,10 +1,10 @@
-package ecdh
+package ec
 
 import (
-    "fmt"
-    "time"
-    "math/big"
-    "math/rand"
+	"fmt"
+	"math/big"
+	"math/rand"
+	"time"
 )
 
 func MillerRabin(candidate *big.Int) bool {
@@ -27,12 +27,12 @@ func MillerRabin(candidate *big.Int) bool {
 
 	for remainder.Sign() == 0 {
 		quotient.DivMod(quotient, two, remainder)
-		s.Add(s,one)
+		s.Add(s, one)
 	}
 	// The last division failed, so we must decrement `s`.
 	s.Sub(s, one)
 	// quotient here contains the leftover which we could not divide by two,
-	// and we have a 1 remaining from this last division. 
+	// and we have a 1 remaining from this last division.
 	d := big.NewInt(1)
 	d.Add(one, d.Mul(two, quotient))
 
@@ -59,13 +59,13 @@ func MillerRabin(candidate *big.Int) bool {
 
 		s64 := s.Int64()
 		sInt := int(s64)
-		
+
 		for i := 1; i < sInt; i++ {
 			generated.Exp(generated, two, candidate)
 
 			if generated.Cmp(one) == 0 {
 				fmt.Println("MillerRabin: Composite, not prime.")
-				return false;
+				return false
 			}
 
 			if generated.Cmp(modulo) == 0 {
@@ -73,13 +73,12 @@ func MillerRabin(candidate *big.Int) bool {
 			}
 		}
 
-
 		if generated.Cmp(modulo) != 0 {
 			// We arrived here because the `i` loop ran its course naturally
 			// without meeting the `x == modulo` break.
 			fmt.Println("MillerRabin: Composite, not prime.")
-			return false;
+			return false
 		}
 	}
-	return true;
+	return true
 }
