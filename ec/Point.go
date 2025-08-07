@@ -48,6 +48,12 @@ func (p *Point) CopyPoint() *Point {
 	return copy
 }
 
+func (p *Point) Frobenius(mod *big.Int) (*big.Int, *big.Int) {
+	x := new(big.Int).Exp(p.x, mod, mod)
+	y := new(big.Int).Exp(p.y, mod, mod)
+	return x, y
+}
+
 func (p *Point) GetX() *big.Int {
 	return p.x
 }

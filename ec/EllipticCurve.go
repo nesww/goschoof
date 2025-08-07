@@ -2,6 +2,8 @@ package ec
 
 import (
 	"fmt"
+	"goschoof/utils"
+	"log"
 	"math/big"
 )
 
@@ -11,8 +13,20 @@ type EllipticCurve struct {
 	p *big.Int //has to be prime
 }
 
+func (ec *EllipticCurve) GetA() *big.Int {
+	return ec.a
+}
+
+func (ec *EllipticCurve) GetB() *big.Int {
+	return ec.b
+}
+
+func (ec *EllipticCurve) GetP() *big.Int {
+	return ec.p
+}
+
 func NewEllipticCurve(a, b, p *big.Int) (*EllipticCurve, error) {
-	if !MillerRabin(p) {
+	if !utils.IsPrimeBigInt(p) {
 		return nil, fmt.Errorf("Given p %s for prime number as modulo of the curve is not prime.\n", p)
 	}
 
@@ -260,10 +274,51 @@ func (ec *EllipticCurve) MultiplyPointByScalar(p *Point, n *big.Int) (*Point, er
 
 // CheckHasseTheorem True iff the elliptic curve passes the hasse theorem stating that the number of points of the curve
 //
-//	within its finite body is close to the number of elements of the finite body itself
+//	within its finite field is close to the number of elements of the finite field itself
 //
 // i.e. |N - (q + 1)| <= 2 * sqrt(p), see https://en.wikipedia.org/wiki/Hasse%27s_theorem_on_elliptic_curves
 func (ec *EllipticCurve) CheckHasseTheorem() bool {
 	//TODO: use schoof to get the number of points of the elliptic curve
 	return ec.IsNonSingular() && true
+}
+
+func CreateEC() *EllipticCurve {
+	a, ok := new(big.Int).SetString("0x0000000000000000000000000000000000000000000000000000000000000000", 0)
+	if !ok {
+		log.Fatalf("Given 'a' hexadecimal string representation was not correct or could not be converted to big.Int type.\n")
+	}
+	log.Printf("Successfully loaded 'a': %x \n", a)
+
+	b, ok := new(big.Int).SetString("0x0000000000000000000000000000000000000000000000000000000000000007", 0)
+	if !ok {
+		log.Fatalf("Given 'b' hexadecimal string representation was not correct or could not be converted to big.Int type.\n")
+	}
+	log.Printf("Successfully loaded 'b': %x \n", b)
+
+	p, ok := new(big.Int).SetString("0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F", 0)
+	if !ok {
+		log.Fatalf("Given 'p' hexadecimal string representation was not correct or could not be converted to big.Int type.\n")
+	}
+	log.Printf("Successfully loaded 'p': %x \n", p)
+
+	curve, _ := NewEllipticCurve(a, b, p)
+	return curve
+}
+
+// ProcessYFrom Computes Weiestrass equation to get Y
+// if no square root, returns nil with false
+func (ec *EllipticCurve) ProcessYFrom(x *big.Int) (*big.Int, bool) {
+	x3 := new(big.Int).Exp(x, big.NewInt(3), ec.p) // x^3 mod p
+	ax := new(big.Int).Mul(ec.a, x)                //a * x
+	ax.Mod(ax, ec.GetP())                          // a * x mod p
+
+	val := new(big.Int).Add(x3, ax)      // x^3 + a*x
+	val.Add(val, ec.b)                   //x^3 + a*x + b
+	val.Mod(val, ec.p)                   // .. mod p
+	y := new(big.Int).ModSqrt(val, ec.p) // sqrt(val) mod p
+
+	if y == nil {
+		return nil, false
+	}
+	return y, true
 }
