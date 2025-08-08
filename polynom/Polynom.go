@@ -114,8 +114,8 @@ func (poly *Polynom) Sub(other *Polynom) *Polynom {
 }
 
 func (poly *Polynom) Mul(other *Polynom) *Polynom {
-	degA := poly.Degree()
-	degB := other.Degree()
+	degA := len(poly.Coefficients)
+	degB := len(other.Coefficients)
 	resultDegree := degA + degB - 1
 
 	resultCoeffs := make([]*big.Int, resultDegree)
@@ -124,7 +124,7 @@ func (poly *Polynom) Mul(other *Polynom) *Polynom {
 	}
 
 	for i := 0; i < degA; i++ {
-		for j := 0; j < degB; i++ {
+		for j := 0; j < degB; j++ {
 			prod := new(big.Int).Mul(poly.Coefficients[i], other.Coefficients[j])
 			prod.Mod(prod, poly.P)
 			resultCoeffs[i+j].Add(resultCoeffs[i+j], prod)

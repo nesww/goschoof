@@ -2,16 +2,31 @@ package schoof
 
 import (
 	"goschoof/ec"
+	"goschoof/polynom"
 	"log"
 	"math/big"
 )
 
-// ResolvePolynomialDivisionL2 naive implementation for l = 2
+// PSICache Cache for PSI calculations
+// (storing result and preventing deep recursion for already done calculations).
+type PSICache struct {
+	curve *ec.EllipticCurve
+	cache map[int64]*polynom.Polynom
+}
+
+func NewPSICache(curve *ec.EllipticCurve) *PSICache {
+	return &PSICache{
+		curve: curve,
+		cache: make(map[int64]*polynom.Polynom),
+	}
+}
+
+// GetPointsOfL2 naive implementation for l = 2
 // for every possible x < p (the modulo of the curve) restricting to the finite field
 // get all points that have y=0
 // if any error happens, nil will be returned
 // bad for performance, only for testing purposes
-func ResolvePolynomialDivisionL2(curve *ec.EllipticCurve) []*ec.Point {
+func GetPointsOfL2(curve *ec.EllipticCurve) []*ec.Point {
 	var points []*ec.Point
 	zero := big.NewInt(0)
 
@@ -36,6 +51,15 @@ func ResolvePolynomialDivisionL2(curve *ec.EllipticCurve) []*ec.Point {
 		}
 	}
 	return points
+}
+
+func BuildPolynomL2(curve *ec.EllipticCurve) *polynom.Polynom {
+	fourB := new(big.Int).Mul(big.NewInt(4), curve.GetB())
+	fourA := new(big.Int).Mul(big.NewInt(4), curve.GetA())
+	poly := polynom.NewPolynom([]*big.Int{
+		fourB, fourA, big.NewInt(0), big.NewInt(4),
+	}, curve.GetP())
+	return poly
 }
 
 // psi3 Computes ψ3(x) mod p,
@@ -95,16 +119,105 @@ func ResolvePolynomialDivisionL3(curve *ec.EllipticCurve) []*ec.Point {
 	return points
 }
 
+// BuildPolynomL3 3x⁴ + 6a*x² + 12b*x - a² mod p
+func BuildPolynomL3(curve *ec.EllipticCurve) *polynom.Polynom {
+	negASquared := new(big.Int).Exp(curve.GetA(), big.NewInt(2), curve.GetP()) // a²
+	negASquared.Neg(negASquared)                                               // - a²
+
+	twelveB := new(big.Int).Mul(big.NewInt(12), curve.GetB()) // 12b
+	sixA := new(big.Int).Mul(big.NewInt(6), curve.GetA())     // 6a
+	poly := polynom.NewPolynom([]*big.Int{
+		negASquared, twelveB, sixA, big.NewInt(0), big.NewInt(3),
+	}, curve.GetP())
+	return poly
+}
+
 // PSI_l
 // if l is odd $ ψ_{2m+1} = ψ_{m+2} * ψ³_{m} − ψ_{m−1] * ψ³_{m+1} $
-// else $ψ_{2m}=\frac{ψ_m}{2y}(ψ_{m+2} * ψ²_{m−1}−ψ_{m−2} * ψ²_{m+1})$
-func PSI_l(curve *ec.EllipticCurve, l int64) []*ec.Point {
-	if l == 2 {
-		return ResolvePolynomialDivisionL2(curve)
+// else $ψ_{2m}=\frac{ψ_m}{2y}(ψ_{m+2} * ψ²_{m−1}−ψ_{m−2} * ψ²_{m+1})$ (but will change, no division & no y)
+func PSI_l(curve *ec.EllipticCurve, l int64, psiCache *PSICache) *polynom.Polynom {
+	//short-circuiting existing calculated psi values
+	if poly, ok := psiCache.cache[l]; ok {
+		return poly
 	}
-	if l == 3 {
-		return ResolvePolynomialDivisionL3(curve)
+
+	var res *polynom.Polynom
+
+	switch l {
+	case 0:
+		res = polynom.NewPolynom([]*big.Int{big.NewInt(0)}, curve.GetP())
+		psiCache.cache[l] = res
+		return res
+	case 1:
+		//if l = 1, the corresponding polynomial is only 1, with no x
+		res = polynom.NewPolynom([]*big.Int{big.NewInt(1)}, curve.GetP())
+		psiCache.cache[l] = res
+		return res
+	case 2:
+		res = BuildPolynomL2(curve)
+		psiCache.cache[l] = res
+		return res
+
+	case 3:
+		res = BuildPolynomL3(curve)
+		psiCache.cache[l] = res
+		return res
+	case 4:
+		// avoiding infinite looping with m+2 case (2+2 = 4 since m = l / 2 & for l = 4
+		// would be calculating m = 4 (we need m+2) to get l = 4
+		// leading to stack overflow for infinite recursion
+		p2 := PSI_l(curve, 2, psiCache)
+		p3 := PSI_l(curve, 3, psiCache)
+		res := p2.Mul(p2).Mul(p3.Mul(p3))
+		psiCache.cache[l] = res
+		return res
 	}
-	//TODO: add a cache system to prevent repetitive calculations
-	return nil
+
+	//l is odd: $ ψ_{2m+1} = ψ_{m+2} * ψ³_{m} − ψ_{m−1] * ψ³_{m+1} $
+	// so
+	// 	   2m+1 = l
+	//<==> 2m = l - 1
+	//<==> m = (l - 1) / 2
+	if l%2 != 0 {
+		m := (l - 1) / 2
+		// to have ψ_{2m+1}, we have to calculate ψ_{m+2}, ψ³_{m}, ψ_{m-1} & ψ³_{m+1}
+		// m will be recursively a 'l' value
+		PsiMp2 := PSI_l(curve, m+2, psiCache)
+
+		PsiM := PSI_l(curve, m, psiCache)
+		PsiMcubed := PsiM.Mul(PsiM).Mul(PsiM)
+
+		PsiMm1 := PSI_l(curve, m-1, psiCache)
+
+		PsiMp1 := PSI_l(curve, m+1, psiCache)
+		PsiMp1cubed := PsiMp1.Mul(PsiMp1).Mul(PsiMp1)
+
+		term1 := PsiMp2.Mul(PsiMcubed)   // ψ_{m+2} * ψ³_{m}
+		term2 := PsiMm1.Mul(PsiMp1cubed) //ψ_{m−1] * ψ³_{m+1}
+		res = term1.Sub(term2)           // ψ_{m+2} * ψ³_{m} − ψ_{m−1] * ψ³_{m+1}
+	} else {
+		// l is even
+		// $ψ_{2m}=\frac{ψ_m}{2y}(ψ_{m+2} * ψ²_{m−1}−ψ_{m−2} * ψ²_{m+1})$
+		// 	    l = 2m
+		// <==> l/2 = m
+
+		// since we cannot do ψ_m/2y (we want polynomials with only x)
+		// we calculate the T_l² polynomial (not ψ_l nor ψ_l²)
+		// to allow eliminating the y and the division
+		m := l / 2
+		M := PSI_l(curve, m, psiCache)
+		A := PSI_l(curve, m+2, psiCache) // m must NOT be 2 in case the cache doesn't contain l=4, or will SO
+		B := PSI_l(curve, m-1, psiCache)
+		C := PSI_l(curve, m-2, psiCache)
+		D := PSI_l(curve, m+1, psiCache)
+
+		B2 := B.Mul(B)                // B²
+		D2 := D.Mul(D)                // D²
+		M2 := M.Mul(M)                // M²
+		E := A.Mul(B2).Sub(C.Mul(D2)) // A*B² - C*D²
+		res = M2.Mul(E.Mul(E))        // M² * E²
+	}
+
+	psiCache.cache[l] = res
+	return res
 }

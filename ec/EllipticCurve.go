@@ -305,7 +305,7 @@ func CreateEC() *EllipticCurve {
 	return curve
 }
 
-// ProcessYFrom Computes Weiestrass equation to get Y
+// ProcessYFrom Computes Weierstrass equation to get Y
 // if no square root, returns nil with false
 func (ec *EllipticCurve) ProcessYFrom(x *big.Int) (*big.Int, bool) {
 	x3 := new(big.Int).Exp(x, big.NewInt(3), ec.p) // x^3 mod p

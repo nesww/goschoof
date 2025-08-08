@@ -62,7 +62,7 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	points := schoof.ResolvePolynomialDivisionL2(curve2)
+	points := schoof.GetPointsOfL2(curve2)
 
 	log.Printf("Points of order 2 on the curve: %d found\n", len(points))
 	for i, pt := range points {
@@ -75,4 +75,10 @@ func main() {
 	for i, pt := range points3 {
 		log.Printf("Point %d : x = %s, y = %s\n", i+1, pt.GetX(), pt.GetY())
 	}
+
+	//using a cache to prevent stack overflow and better performance
+	cache := schoof.NewPSICache(curve)
+	l := int64(6)
+	poly := schoof.PSI_l(curve, l, cache)
+	log.Printf("Polynom found for l=%d %v", l, poly)
 }
