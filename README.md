@@ -47,6 +47,8 @@ $ψ_{2m}=\frac{ψ_m}{2y}(ψ_{m+2} \times ψ²_{m−1}−ψ_{m−2} \times ψ²_{
 > 
 > with $N$ the number of points of the elliptic curve, on a finite field with $q$ elements. 
 - Schoof-Elkies-Atkin algorithm (extension of Schoof algorithm) https://en.wikipedia.org/wiki/Schoof%E2%80%93Elkies%E2%80%93Atkin_algorithm
+- Schoof's algorithm for Counting Points on $E(\mathbb F_q)$, Gregg Musiker, 7th December 2005 https://www-users.cse.umn.edu/~musiker/schoof.pdf
+- 
 - `secp256k1` elliptic curve (used for bitcoin) https://en.bitcoin.it/wiki/Secp256k1
 
 <img src="assets/Secp256k1.png" style="background: aliceblue">

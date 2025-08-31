@@ -2,6 +2,7 @@ package main
 
 import (
 	"goschoof/ec"
+	"goschoof/polynom"
 	"goschoof/schoof"
 	"goschoof/utils"
 	"log"
@@ -62,12 +63,9 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	points := schoof.GetPointsOfL2(curve2)
+	points := schoof.CountTorsion2PointsFromPoly(curve2)
 
-	log.Printf("Points of order 2 on the curve: %d found\n", len(points))
-	for i, pt := range points {
-		log.Printf("Point %d : x = %s, y = %s\n", i+1, pt.GetX(), pt.GetY())
-	}
+	log.Printf("Points of order 2 on the curve: %d found\n", points)
 
 	points3 := schoof.ResolvePolynomialDivisionL3(curve2)
 
@@ -78,7 +76,45 @@ func main() {
 
 	//using a cache to prevent stack overflow and better performance
 	cache := schoof.NewPSICache(curve)
-	l := int64(6)
+	l := big.NewInt(3)
 	poly := schoof.PSI_l(curve, l, cache)
 	log.Printf("Polynom found for l=%d %v", l, poly)
+
+	//testing mod div for polynomials
+	ptest := big.NewInt(101)
+	poly = polynom.NewPolynom([]*big.Int{}, ptest)
+	h := schoof.PSI_l(curve, l, cache)
+
+	//x^3 + 2x + 5
+	F := polynom.NewPolynom([]*big.Int{
+		big.NewInt(5), // x^0
+		big.NewInt(2), // x^1
+		big.NewInt(0), // x^2
+		big.NewInt(1), // x^3
+	}, ptest)
+
+	Q, R := F.DivMod(h)
+	log.Printf("Degree(R) < Degree(h)?: %v", R.Degree() < h.Degree())
+
+	log.Printf("R = %v", R)
+
+	F2 := Q.Mul(h).Add(R) // Q*h + R (quotient * h + remainder must give the F polynomial)
+	log.Printf("F2 == F ? \n %v == %v", F2, F)
+
+	p = big.NewInt(101)
+	h = polynom.NewPolynom([]*big.Int{big.NewInt(1), big.NewInt(0), big.NewInt(1)}, p) // x^2+1
+
+	Xplus3 := polynom.NewPolynom([]*big.Int{big.NewInt(3), big.NewInt(1)}, p)     // x+3
+	FourxPlus7 := polynom.NewPolynom([]*big.Int{big.NewInt(7), big.NewInt(4)}, p) // 4x+7
+
+	F = h.Mul(Xplus3).Add(FourxPlus7)
+	Q, R = F.DivMod(h)
+	log.Printf("R expected ~ 4x+7, got R= %s\n\n", R.String())
+
+	//////////////////
+	// SCHOOF 		//
+	//////////////////
+
+	N := schoof.Schoof(curve2)
+	log.Printf("N found for secp256k1: %v", N)
 }
