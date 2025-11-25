@@ -10,7 +10,7 @@ This implementation also provides an elliptic curves implementation (probably no
 
 Defined with the following equation (Weierstrass equation):
  
-$ y^2 = x^3 + Ax + B$ with $A,B\in\mathbb F_q$, $q = p^n$, $p$ a prime number and $n$ an integer $\ge 1$, $p\neq2,3$.
+$y^2 = x^3 + Ax + B$ with $A,B\in\mathbb F_q$, $q = p^n$, $p$ a prime number and $n$ an integer $\ge 1$, $p\neq2,3$.
 
 ## Polynomials
 To get points of a given order (ℓ) of the curve.
