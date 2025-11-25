@@ -1,6 +1,6 @@
 # goschoof : Schoof algorithm implementation in Golang
 
-### project still in progress, thus, the Schoof implementation is not done yet, & will be followed by a Schoof-Elkies-Atkin implementation when done
+### PROJECT SUSPENDED: Implementation exists but is **not** working
 
 This implementation also provides an elliptic curves implementation (probably not the best optimized) focused on cryptography 
 (by checking for groups, primality of $p$ for the elliptic curve, non-singularity, etc.).
@@ -8,9 +8,9 @@ This implementation also provides an elliptic curves implementation (probably no
 
 ## Elliptic curves
 
-> Defined with the following equation (Weierstrass equation):
-> 
-> $ y^2 = x^3 + Ax + B$ with $A,B\in\mathbb F_q$, $q = p^n$, $p$ a prime number and $n$ an integer $\ge 1$, $p\neq2,3$.
+Defined with the following equation (Weierstrass equation):
+ 
+$ y^2 = x^3 + Ax + B$ with $A,B\in\mathbb F_q$, $q = p^n$, $p$ a prime number and $n$ an integer $\ge 1$, $p\neq2,3$.
 
 ## Polynomials
 To get points of a given order (ℓ) of the curve.
